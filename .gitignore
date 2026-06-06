@@ -1,0 +1,9 @@
+tools/
+SweetHome3D-7.5-src.zip
+SweetHome3D-7.5-src/build/
+SweetHome3D-7.5-src/install/*.jar
+SweetHome3D-7.5-src/install/*.exe
+SweetHome3D-7.5-src/install/*.dmg
+SweetHome3D-7.5-src/install/*.sh
+launch.log
+*.class
