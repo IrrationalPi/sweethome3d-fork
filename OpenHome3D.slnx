@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenHome3D.Core/OpenHome3D.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenHome3D.Core.Tests/OpenHome3D.Core.Tests.csproj" />
+  </Folder>
+</Solution>
