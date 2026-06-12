@@ -81,14 +81,17 @@ To avoid a "big bang" rewrite, the port will be executed in distinct, testable p
 - **Completion Criteria**: Unit tests pass asserting that parsing XML with walls/rooms correctly populates the collections with accurate coordinates and dimensions.
 - **Documentation**: Update the domain model mapping section to reflect the new C# types.
 
-#### Iteration 1.3: Furniture & Properties Parsing ✅ COMPLETED
+#### Iteration 1.3: Furniture, Doors/Windows & Properties Parsing ✅ COMPLETED
 
-- **Goal**: Parse furniture placements and custom home properties.
+- **Goal**: Parse furniture placements, wall openings (doors/windows), and custom home properties.
 - **Tasks**:
-  1. Expand C# models: `HomePieceOfFurniture` (`Id`, `X`, `Y`, `Z`, `Angle`, `Width`, `Depth`, `Height`, `ModelName`) and `HomeProperty` (`Name`, `Value`).
-  2. Update `HomeXmlParser` to parse `<pieceOfFurniture ... />` and `<property name="..." value="..." />` elements.
-- **Completion Criteria**: Unit tests pass asserting that parsing XML with furniture correctly populates the `Home.Furniture` collection with accurate spatial data.
-- **Documentation**: Custom properties are now handled via the `HomeProperty` record and stored in the `Home.Properties` collection, preserving arbitrary key-value metadata from the original `.sh3d` files.
+  1. Expand C# models: 
+     - `HomePieceOfFurniture` (`Id`, `Name`, `X`, `Y`, `Z`, `Angle`, `Width`, `Depth`, `Height`, `ModelName`).
+     - `DoorOrWindow` (`Id`, `Name`, `X`, `Y`, `Angle`, `Width`, `Depth`, `Height`, `WallThickness`, `WallDistance`, `CutOutShape`, `WallCutOutOnBothSides`).
+     - `HomeProperty` (`Name`, `Value`).
+  2. Update `HomeXmlParser` to parse `<pieceOfFurniture ... />`, `<doorOrWindow ... />`, and `<property name="..." value="..." />` elements.
+- **Completion Criteria**: Unit tests pass asserting that parsing XML with furniture and doors/windows correctly populates the respective collections with accurate spatial and dimensional data.
+- **Documentation**: Custom properties are handled via the `HomeProperty` record. Door/window cutouts are preserved via `CutOutShape` for accurate 2D/3D rendering, maintaining 100% fidelity with files like `actual_sh3d_save.sh3d`.
 
 #### Iteration 1.4: .sh3d ZIP Extraction & Content Mapping (Read)
 
@@ -100,15 +103,16 @@ To avoid a "big bang" rewrite, the port will be executed in distinct, testable p
 - **Completion Criteria**: Unit test passes asserting that loading a valid `.sh3d` file successfully returns a populated `Home` object and a non-empty content map (if the file has embedded assets).
 - **Documentation**: Add `.sh3d` structure notes to the `README.md`.
 
-#### Iteration 1.5: XML Exporter & Roundtrip Validation (Write) ✅ COMPLETED
+#### Iteration 1.5: XML Exporter & Roundtrip Validation ✅ COMPLETED
 
-- **Goal**: Implement the exporter and prove 100% data fidelity through roundtrip testing.
+- **Goal**: Implement the exporter and prove 100% data fidelity through roundtrip testing, specifically validating against the provided `tests/OpenHome3D.Core.Tests/Resources/actual_sh3d_save.sh3d` fixture.
 - **Tasks**:
   1. Implement `HomeXmlExporter` using `System.Xml.XmlWriter` to generate `Home.xml` from the C# `Home` model, mirroring the Java `HomeXMLExporter`.
   2. Update `Sh3dIO.Save(Home home, IReadOnlyDictionary<string, byte[]> content, string filePath)` to generate the XML and package it + referenced content into a new `.sh3d` ZIP.
-  3. Write a parameterized xUnit roundtrip test: Load a canonical `.sh3d` -> Export to a new `.sh3d` -> Load the new `.sh3d` -> Assert deep equality of core properties (Name, Wall count/coords, Furniture count/coords).
-- **Completion Criteria**: Roundtrip tests pass for a provided set of 3 canonical `.sh3d` files (empty, with walls, with furniture). No data loss or corruption.
-- **Documentation**: Phase 1 is now complete. The testing strategy has been updated with roundtrip test patterns.
+  3. Write a parameterized xUnit roundtrip test. Key fixtures include empty homes, wall configurations, and the comprehensive `actual_sh3d_save.sh3d` (which includes 5 walls, 1 door, 3 fixed windows, and 5 pieces of furniture).
+  4. Roundtrip assertion: Load `actual_sh3d_save.sh3d` -> Export to `actual_sh3d_save_roundtrip.sh3d` -> Load the new `.sh3d` -> Assert deep equality of core properties (Name="Office Layout.sh3d", Wall count=5, Furniture count=5, Door/Window count=4, all coordinates and dimensions match within floating-point tolerance).
+- **Completion Criteria**: Roundtrip tests pass for all canonical `.sh3d` files with zero data loss, corruption, or floating-point degradation.
+- **Documentation**: Phase 1 is now complete. The testing strategy has been updated with roundtrip test patterns, explicitly citing the `actual_sh3d_save.sh3d` validation.
 
 ### Phase 2: Core Business Logic & Geometry (Broken into Testable Iterations)
 
@@ -178,15 +182,16 @@ To avoid a "big bang" rewrite, the port will be executed in distinct, testable p
 
 #### Iteration 3.1: Avalonia UI Shell & Basic Window Setup
 
-- **Goal**: Set up the Avalonia UI project, main window, and basic layout (menus, toolbars).
+- **Goal**: Set up the Avalonia UI project, main window, and basic layout (menus, toolbars), with an integrated "Open File" dialog.
 - **Tasks**:
   1. Create `OpenHome3D.UI` project (`dotnet new avalonia.app -n OpenHome3D.UI -f net8.0`).
   2. Add reference to `OpenHome3D.Core`.
   3. Create `MainWindow.axaml` with a basic layout (Menu, Toolbar, Content area for 2D view).
   4. Wire up the `MainViewModel` from Phase 2 to the `MainWindow` via `DataContext`.
-- **Completion Criteria**: `dotnet build` succeeds. `OpenHome3D.UI` launches and displays the empty application shell.
-- **Unit Testing**: Basic xUnit test verifying `MainWindow` instantiation and `DataContext` binding to `MainViewModel`.
-- **Documentation**: Update `README.md` with instructions on how to build and run the UI project (`dotnet run --project src/OpenHome3D.UI`).
+  5. Implement an `OpenFileCommand` that triggers a file open dialog, filters for `*.sh3d`, and uses `Sh3dIO.Load` to populate the `MainViewModel.Home`.
+- **Completion Criteria**: `dotnet build` succeeds. `OpenHome3D.UI` launches, allows opening `actual_sh3d_save.sh3d`, and binds the loaded data to the ViewModel without crashing.
+- **Unit Testing**: Basic xUnit test verifying `MainWindow` instantiation and `DataContext` binding, plus a mocked file-load test.
+- **Documentation**: Update `README.md` with instructions on how to build and run the UI project (`dotnet run --project src/OpenHome3D.UI`) and open existing save files.
 
 #### Iteration 3.2: SkiaSharp 2D Plan View Control (Rendering)
 
@@ -221,15 +226,59 @@ To avoid a "big bang" rewrite, the port will be executed in distinct, testable p
 - **Unit Testing**: `Avalonia.Headless` tests simulating a drag-and-drop operation and asserting that a new furniture item is added to the `HomeViewModel.Furniture` collection with correct world coordinates.
 - **Documentation**: Update `README.md` with a "Core Editing Tools" section detailing the supported interactions and how to extend them.
 
-### Phase 4: 3D Rendering Engine (Weeks 11-16)
+### Phase 4: 3D Rendering Engine (Broken into Testable Iterations)
 
-- **Goal**: Replace Java 3D with a modern, hardware-accelerated 3D view using Godot.
+**Overall Goal**: Replace Java 3D with a modern, hardware-accelerated 3D view using Godot, ensuring accurate scene representation and responsive user interaction. The primary integration test will be successfully rendering the `actual_sh3d_save.sh3d` file in 3D. Each iteration is designed to be completed in a single agent session with passing tests.
+
+#### Iteration 4.1: Godot Project Scaffolding & IPC Protocol Definition
+- **Goal**: Establish the Godot C# rendering project and define a robust communication protocol between the Avalonia UI and the renderer.
 - **Tasks**:
-  1. Set up a Godot C# project and establish communication between the Avalonia UI and the Godot viewport (via GodotSharp or IPC/embedding).
-  2. Port the scene graph logic: instantiate Godot nodes for walls, floors, and furniture (parsing `.obj` / `.3ds` / `.gltf`).
-  3. Implement camera controls (orbit, pan, zoom) matching the original UX using Godot's `Camera3D`.
-  4. Add basic lighting (DirectionalLight3D, OmniLight3D) and StandardMaterial3D support.
-- **Testing**: Visual regression testing (render a scene and compare to a baseline image).
+  1. Create `src/OpenHome3D.Rendering/` as a Godot 4.x C# project (`project.godot`, `OpenHome3D.Rendering.csproj`).
+  2. Define a C# record-based message protocol in `OpenHome3D.Core` (e.g., `RenderingCommand`, `SceneState`) for UI-to-Renderer communication (using JSON serialization).
+  3. Create a basic Godot `Main.cs` script that initializes the 3D environment and can parse/acknowledge a dummy command (e.g., from a local JSON file or stdin).
+  4. Write xUnit tests in `OpenHome3D.Core.Tests` verifying the serialization and deserialization of the message protocol.
+- **Completion Criteria**: Godot project builds successfully (`godot --headless --build-solutions`). Message protocol unit tests pass with 100% coverage.
+- **Documentation**: Update `README.md` with Godot project setup, build instructions, and the IPC protocol schema.
+
+#### Iteration 4.2: Procedural Mesh Generation (Walls & Floors)
+- **Goal**: Translate the C# `Home` model into 3D geometry for walls and floors.
+- **Tasks**:
+  1. Implement `WallMeshGenerator` in `OpenHome3D.Core` that takes a `Wall` and generates vertex/index arrays for a 3D extruded mesh (handling basic straight walls).
+  2. Implement `FloorMeshGenerator` that creates a mesh for `Room` polygons using the existing 2D points and a fixed floor thickness.
+  3. Create a Godot script `SceneBuilder.cs` that receives a serialized `SceneState` and instantiates `MeshInstance3D` nodes with `StandardMaterial3D` using `ArrayMesh`.
+  4. Write xUnit tests verifying that a given `Wall` model produces the expected vertex count (e.g., 8 vertices for a simple rectangular wall) and correct bounding box dimensions.
+- **Completion Criteria**: Unit tests pass asserting correct mesh dimensions and vertex counts for standard wall/floor configurations. Godot scene can successfully load and display a hardcoded test home state.
+- **Documentation**: Document the mesh generation logic, coordinate system mapping (Y-up in Godot vs Y-down in SH3D), and Godot node hierarchy in `README.md`.
+
+#### Iteration 4.3: Furniture Instantiation & Asset Loading
+- **Goal**: Load and place 3D furniture models in the scene based on the `Home` model.
+- **Tasks**:
+  1. Implement logic to map `HomePieceOfFurniture.ModelName` to a `.gltf` or `.obj` file path within the project's asset directory.
+  2. Create a `FurnitureLoader.cs` in Godot that uses `ResourceLoader.Load<PackedScene>` or `GLTFDocument` to dynamically load the model.
+  3. Apply position (`X`, `Y`, `Z`) and rotation (`Angle`) from the `HomePieceOfFurniture` model to the instantiated Godot node, accounting for coordinate system differences.
+  4. Write xUnit tests verifying the transformation matrix calculation (position + Y-axis rotation) for furniture placement.
+- **Completion Criteria**: Unit tests pass for furniture transformation math. A test scene with furniture loads and positions items correctly in the Godot editor/runner.
+- **Documentation**: Update documentation with supported 3D model formats, asset directory structure, and coordinate transformation rules.
+
+#### Iteration 4.4: Camera Controls & Basic Lighting
+- **Goal**: Implement interactive camera controls and basic scene lighting matching the original UX.
+- **Tasks**:
+  1. Add a `Camera3D` and `DirectionalLight3D` (with shadows enabled) to the Godot main scene.
+  2. Implement an `OrbitCameraController.cs` in Godot that handles mouse input for orbit (left drag), pan (middle drag), and zoom (scroll wheel), matching Sweet Home 3D's UX.
+  3. Write xUnit tests verifying camera boundary constraints, zoom limits, and target-centering math.
+  4. Ensure the camera can be programmatically commanded to frame the entire home or a selected object.
+- **Completion Criteria**: Camera controls are functional in the Godot editor and standalone run. Unit tests for camera math/constraints pass.
+- **Documentation**: Document the camera control scheme, lighting setup, and keyboard/mouse mappings in `README.md`.
+
+#### Iteration 4.5: Visual Regression Testing Setup
+- **Goal**: Establish a baseline for visual regression testing of the 3D view to catch graphical regressions.
+- **Tasks**:
+  1. Create a standardized test scene (e.g., `TestHome.sh3d` with 1 room, 4 walls, 1 piece of furniture) and its corresponding `SceneState` JSON.
+  2. Implement a headless Godot script (`VisualRegressionTest.cs`) that loads the test scene, waits for rendering to stabilize (e.g., 10 frames), and saves a screenshot to `tests/OpenHome3D.Rendering.Tests/Baselines/`.
+  3. Write a test runner (xUnit test invoking Godot headless via CLI) that compares the new screenshot's SHA256 hash against the approved baseline hash.
+  4. Add a script or Makefile target (e.g., `dotnet run --project tests/OpenHome3D.Rendering.Tests`) to execute the visual regression check.
+- **Completion Criteria**: Headless Godot run successfully generates a screenshot. Test passes when the screenshot matches the baseline hash.
+- **Documentation**: Add a "3D Visual Regression Testing" section to `README.md` explaining how to run the tests and update baselines when intentional visual changes are made.
 
 ### Phase 5: Advanced Features & Export (Weeks 17-20)
 

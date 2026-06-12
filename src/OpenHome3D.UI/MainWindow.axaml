@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:OpenHome3D.Core.ViewModels"
+        xmlns:local="using:OpenHome3D.UI"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+        x:Class="OpenHome3D.UI.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="OpenHome3D" Width="1024" Height="768">
+    <DockPanel>
+        <!-- Menu -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding NewHomeCommand}" />
+                <Separator />
+                <MenuItem Header="E_xit" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Delete" Command="{Binding CurrentHome.DeleteSelectedCommand}" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_2D Plan" />
+                <MenuItem Header="_3D View" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Toolbar -->
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,4" Spacing="4">
+            <Button Content="New" Command="{Binding NewHomeCommand}" />
+            <Button Content="Load Test" Command="{Binding LoadTestHomeCommand}" />
+            <Separator />
+            <Button Content="Select" Command="{Binding SetSelectToolCommand}" />
+            <Button Content="Add Wall" Command="{Binding SetCreateWallToolCommand}" />
+            <Button Content="Delete" Command="{Binding CurrentHome.DeleteSelectedCommand}" />
+        </StackPanel>
+
+        <!-- Main Content with Sidebar -->
+        <DockPanel>
+            <!-- Catalog Sidebar -->
+            <Border BorderBrush="Gray" BorderThickness="1,0,0,0" DockPanel.Dock="Right" Width="200" Margin="0,4,4,4">
+                <StackPanel>
+                    <TextBlock Text="Furniture Catalog" FontWeight="Bold" Margin="8" />
+                    <TextBlock Text="Click item, then click plan to place" FontStyle="Italic" FontSize="11" Foreground="Gray" Margin="8,0,8,4" TextWrapping="Wrap" />
+                    <ListBox ItemsSource="{Binding FurnitureCatalog}"
+                             SelectedItem="{Binding SelectedCatalogItem, Mode=TwoWay}"
+                             Margin="8">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="LightGray" BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Margin="0,0,0,4" Padding="8">
+                                    <TextBlock Text="{Binding}" />
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Content Area -->
+            <Border BorderBrush="Gray" BorderThickness="1" Margin="4,4,0,4" ClipToBounds="True">
+                <local:PlanViewControl ClipToBounds="True" Focusable="True" />
+            </Border>
+        </DockPanel>
+    </DockPanel>
+</Window>

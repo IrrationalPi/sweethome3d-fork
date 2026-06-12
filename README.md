@@ -90,3 +90,33 @@ The `OpenHome3D.Core.ViewModels` namespace implements the Model-View-ViewModel (
 - `MainViewModel`: The root ViewModel managing the application state, including the `CurrentHome`.
 - `HomeViewModel`: Wraps the immutable `Home` model, exposing `ObservableCollection<T>` for `Walls`, `Rooms`, and `Furniture` to support UI data binding.
 - Relay Commands: `AddWallCommand` and `DeleteSelectedCommand` provide UI-triggered actions that modify the ViewModel collections and update selection state.
+
+### 2D UI Shell & Application Layout
+The `OpenHome3D.UI` project provides the cross-platform Avalonia UI shell:
+- **Main Window**: Features a top Menu bar, a Toolbar with common actions (New, Add Wall, Delete), and a content area reserved for the 2D Plan View.
+- **Data Binding**: The `MainWindow` is bound to `MainViewModel` via `DataContext`, enabling command execution directly from the UI.
+- **Headless UI Testing**: The `OpenHome3D.UI.Tests` project uses `Avalonia.Headless.XUnit` to verify UI instantiation and `DataContext` bindings without requiring a display server.
+
+### 2D Plan View Rendering
+The `PlanViewControl` is a custom Avalonia `Control` that renders the 2D floor plan using native Avalonia drawing primitives:
+- **Grid Background**: Draws a dashed light-gray grid to assist with spatial alignment.
+- **Wall Rendering**: Utilizes `WallGeometryUtils.GetCornerPoints` to calculate the 4 corner points of each wall based on its start/end coordinates and thickness, rendering them as filled dark-gray polygons with black borders.
+- **Reactive Invalidation**: The control subscribes to `CollectionChanged` events on the `HomeViewModel.Walls` and `HomeViewModel.Rooms` collections, automatically calling `InvalidateVisual()` to trigger a re-render whenever the underlying model changes.
+
+### 2D Viewport Interactions (Pan, Zoom, Selection)
+The `PlanViewControl` implements core 2D editing interactions:
+- **Pan**: Middle-mouse drag updates the `PanX` and `PanY` properties on the `HomeViewModel`, shifting the view.
+- **Zoom**: Mouse wheel events adjust the `Zoom` property (clamped between 0.1x and 5.0x), scaling the rendered output via `DrawingContext.PushTransform`.
+- **Selection**: Left-clicks convert screen coordinates to world coordinates and use a ray-casting point-in-polygon algorithm to detect if the click intersects any wall geometry. Selected walls are highlighted with a light-blue fill and blue border, and the `SelectedWall` property on the `HomeViewModel` is updated to reflect the current selection state.
+
+### Core Editing Tools
+The `PlanViewControl` supports active editing modes managed by the `MainViewModel.CurrentTool` property:
+- **Wall Creation Mode**: When `CurrentTool` is set to `"CreateWall"`, the first left-click sets the wall's start point, dragging shows a dashed preview line, and the second click finalizes the wall, adding it to the `HomeViewModel.Walls` collection and automatically reverting to `"Select"` mode.
+- **Drag-and-Drop Furniture**: The control accepts drag-and-drop operations (`AllowDrop="True"`). Dropping text data (e.g., a furniture catalog ID) onto the control creates a new `HomePieceOfFurniture` instance in the `HomeViewModel.Furniture` collection, with its `X` and `Y` coordinates translated from screen space to world space based on the current pan and zoom state.
+
+### Running the UI
+To build and run the Avalonia UI application:
+```bash
+dotnet build
+dotnet run --project src/OpenHome3D.UI
+```
