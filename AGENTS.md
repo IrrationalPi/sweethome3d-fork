@@ -34,6 +34,10 @@
 - **Test Resources**: `.sh3d` fixtures are in `tests/OpenHome3D.Core.Tests/Resources/`. The `.csproj` is configured to copy these to the output directory (`PreserveNewest`).
 - **No Flaky Tests**: Avoid timing-dependent UI tests in the core library. Use deterministic xUnit facts.
 
+## Documentation & Tracking
+
+- **Execution Process**: Always follow the standardized implementation and progress tracking process defined in `docs/agents/execution-tracking-process.md`. This includes maintaining checklists, logging technical debt, and consolidating documentation to keep context lean.
+
 ## Workflow Gotchas
 
 - **Do not modify** `SweetHome3D-7.5-src/`, this is only for reference. All new feature development belongs in the `src/` and `tests/` C# directories.
